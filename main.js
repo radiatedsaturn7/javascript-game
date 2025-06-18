@@ -1,9 +1,12 @@
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.155/build/three.module.js';
+import { PointerLockControls } from 'https://cdn.jsdelivr.net/npm/three@0.155/examples/jsm/controls/PointerLockControls.js';
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 1, 1000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-const controls = new THREE.PointerLockControls(camera, document.body);
+const controls = new PointerLockControls(camera, document.body);
 
 const startButton = document.getElementById('start');
 startButton.addEventListener('click', () => {
