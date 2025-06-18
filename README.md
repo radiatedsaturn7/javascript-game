@@ -55,5 +55,13 @@ During early prototypes, development can remain entirely in JavaScript/HTML/CSS.
 
 ## Contributing
 
-This repository is a placeholder for now. Feel free to fork it or open issues to discuss ideas. The goal is to create a fun, frantic arcade experience with an emphasis on creative weaponry and accessibility.
+This repository now includes a small playable demo built with [Three.js](https://threejs.org/).
+Open `index.html` in any modern browser to test it. The demo features:
+
+* Two primary weapons: a rapid yet inaccurate machine gun and a slower, accurate laser.
+* Homing missiles as a side weapon (press **F**).
+* Orange "wingman" spheres that follow the player and mirror shots.
+* Two enemy types: red chargers that rush the player and blue shooters that wander and fire back.
+
+Feel free to fork the project or open issues to discuss ideas. The goal is still to create a fun, frantic arcade experience with an emphasis on creative weaponry and accessibility.
 
