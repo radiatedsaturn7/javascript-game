@@ -1,67 +1,100 @@
-# First-Person Raiden (Working Title)
+# 🏁 ASCII-F-ZERO: Terminal Velocity
 
-This project aims to translate the fast-paced arcade action of classic shooters like **RAIDEN II** into a first-person perspective. It is intentionally lightweight so that it can run inside a regular web browser without the need for heavy engines or powerful hardware.
+Welcome to **ASCII-F-ZERO**, the most violently nostalgic 2.5D racing game you never asked for.
 
-## Overview
+Blistering speed. Exploding pixels. A track made entirely of slashes and pipes.  
+This ain't just a game—it's a **high-octane hallucination in your terminal**.
 
-- **Genre:** First-person shooter with scripted enemy patterns inspired by classic top-down shooters.
-- **Engine:** JavaScript-based. The goal is to load and test the game directly by opening `index.html` in a browser. Engines such as **Three.js** or **Babylon.js** are candidates since they can render 3D scenes through WebGL while remaining lightweight.
-- **Graphics:** Low barrier—simple shapes (cubes, cones, cylinders, triangles) with minimal animations. Focus on gameplay and imaginative weapons rather than visual fidelity.
+---
 
-## Core Gameplay
+## 🚀 Features
 
-1. **The Super Weapon**
-   - The player equips one primary gun that can morph into different firing modes.
-   - Think of it as a blend of a chronocepter, quad rocket launcher, and energy cannon all in one package.
-   - Switching modes is instantaneous, and the weapon can fire multiple types of shots simultaneously.
+- Fast-paced pseudo-3D perspective racing in pure ASCII
+- Curving tracks, lane switching, and procedural chaos
+- Dodge obstacles, hug curves, and pray to the frame gods
+- Written in Python using `curses` like a true masochist
 
-2. **Enemy Patterns**
-   - Hostile robots attack in waves, following predetermined formations similar to the enemy patterns in *Gradius* or *RAIDEN II*.
-   - Some enemies dive from above, others strafe across the player’s view, and bosses have several distinct phases.
+---
 
-3. **Fast-Paced Action**
-   - Movement is quick, and enemies swarm the player relentlessly. The intent is to keep the adrenaline high, just like the arcade classics.
-   - Levels are short but challenging—perfect for quick sessions or high-score attempts.
+## 📦 Requirements
 
-4. **Power-Ups and Wingmen**
-   - Destroyed enemies drop pick-ups that upgrade the super weapon.
-   - Each upgrade visibly changes the gun—new barrels, glowing parts, or extra attachments.
-   - Certain pick-ups spawn wingman drones that mirror your shots, multiplying firepower.
-   - Upgrades can also unlock side weapons, such as homing missiles that launch alongside normal fire.
+### 🔧 Runtime:
+- Python **3.8+**
+- Works best in **Unix/Linux terminals**
+  - Windows users: install [`windows-curses`](https://pypi.org/project/windows-curses/) via pip
 
-## Weapons and Power-Ups
+### 📚 Python Packages:
+```bash
+pip install -r requirements.txt
+```
 
-- **Energy Blaster** – Rapid-fire beams that shred lesser robots.
-- **Quad Rocket Launcher** – Launches a spread of rockets for area damage.
-- **Nuke Cannon** – A slow-firing but devastating explosive shot.
-- **Time Distorter** – Temporarily slows down enemies, giving the player breathing room.
-- **Homing Missiles** – Secondary rockets that track foes whenever the player fires.
+**`requirements.txt`:**
+```txt
+windows-curses ; sys_platform == 'win32'
+```
+_(Yeah, that's it—`curses` is built-in on Unix. Windows just needs a little help.)_
 
-These modes are all packed into the same super weapon, so players can swap between them without changing guns.
+---
 
-## Development Workflow
+## 🕹 Controls
 
-1. Clone the repository on any machine (even a Chromebook).
-2. Install dependencies, if any, using `npm install`.
-3. Open `index.html` in a modern browser to run the game. No need for a heavy IDE or runtime.
+| Key | Action        |
+|-----|---------------|
+| ←   | Steer Left    |
+| →   | Steer Right   |
+| Q   | Quit (when your eyes start bleeding) |
 
-During early prototypes, development can remain entirely in JavaScript/HTML/CSS. If the project grows, we can introduce additional build tooling, but the core requirement is that the game remains easy to test locally.
+---
 
-## Future Ideas
+## 🛠 Project Structure
 
-- Online leaderboards to track high scores.
-- Co-op mode where multiple players join in via WebSockets.
-- Unlockable weapon upgrades to encourage replay value.
+```
+ascii-fzero/
+├── game.py             # Main game loop and render engine
+├── track.py            # Track segment logic and generation
+├── player.py           # Your scrappy little ASCII racer
+├── README.md           # This glorious document
+├── requirements.txt    # Python packages (only for Windows)
+```
 
-## Contributing
+---
 
-This repository now includes a small playable demo built with [Three.js](https://threejs.org/).
-Open `index.html` in any modern browser to test it. The demo features:
+## 💡 Concept
 
-* Two primary weapons: a rapid yet inaccurate machine gun and a slower, accurate laser.
-* Homing missiles as a side weapon (press **F**).
-* Orange "wingman" spheres that follow the player and mirror shots.
-* Two enemy types: red chargers that rush the player and blue shooters that wander and fire back.
+We're faking 3D in a 2D world using **scaled perspective**, **line skewing**, and **raw terminal power**.  
+The track flies toward you. You move left and right. Everything else is illusion.
 
-Feel free to fork the project or open issues to discuss ideas. The goal is still to create a fun, frantic arcade experience with an emphasis on creative weaponry and accessibility.
+---
 
+## 🧪 Known Issues
+
+- It runs in a terminal. Don't expect ray tracing.
+- Frame rates may vary depending on your soul and system load.
+- You may develop uncontrollable urges to wear a leather jacket and flip off polygons.
+
+---
+
+## ❤️ Credits
+
+Created by someone with too much imagination and not enough GPU.  
+Powered by the ghost of old arcade machines and the spirit of "what if?"
+
+---
+
+## 🧠 Coming Soon (Maybe?)
+
+- AI opponents (`E`)
+- Boost pads (`+`)
+- Crashes & explosions (`#`)
+- Custom tracks?
+- Online leaderboards (for terminal gremlins only)
+
+---
+
+## 🧵 License
+
+MIT, because chaos should be free.
+
+---
+
+**Run fast. Turn hard. Dodge ASCII death.**
