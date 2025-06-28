@@ -1,37 +1,39 @@
 import curses
 import time
-from typing import List
+import math
 
-from track import Track
+from map_loader import Map
 from player import Player
 
 FRAME_DELAY = 1 / 30.0
+VIEW_DISTANCE = 20.0
+FOV = 0.7
 
 
-def draw_track(stdscr, center_x: int, horizon: int, track: Track, player: Player):
+def draw_scene(stdscr, game_map: Map, player: Player):
     height, width = stdscr.getmaxyx()
-    max_depth = height - horizon - 1
-    track_center = center_x + int(track.offset * center_x)
-    for depth in range(max_depth):
-        perspective = depth / max_depth
-        road_width = int(perspective * width * 0.6) + 3
-        left = track_center - road_width // 2
-        right = track_center + road_width // 2
-        y = horizon + depth
-        if 0 <= y < height:
-            if left >= 0:
-                stdscr.addch(y, min(width - 1, left), ord('|'), curses.color_pair(1))
-            if right < width:
-                stdscr.addch(y, min(width - 1, right), ord('|'), curses.color_pair(1))
-            for x in range(max(0, left + 1), min(width - 1, right)):
-                stdscr.addch(y, x, ord(' '), curses.color_pair(4))
+    horizon = height // 3
 
-    # draw player
-    bottom_y = height - 2
-    lane_width = (width * 0.6) / player.lanes
-    player_x = track_center - int((width * 0.6) / 2) + int(lane_width * player.position + lane_width / 2)
-    player_x = max(0, min(width - 1, player_x))
-    stdscr.addch(bottom_y, player_x, ord('A'), curses.color_pair(2))
+    forward_x = math.sin(player.angle)
+    forward_y = -math.cos(player.angle)
+    left_x = math.cos(player.angle)
+    left_y = math.sin(player.angle)
+
+    for sy in range(horizon, height):
+        depth = ((sy - horizon + 1) / (height - horizon)) * VIEW_DISTANCE
+        for sx in range(width):
+            offset = ((sx - width / 2) / (width / 2)) * depth * FOV
+            wx = player.x + forward_x * depth + left_x * offset
+            wy = player.y + forward_y * depth + left_y * offset
+            ch = game_map.char_at(wx, wy)
+            if ch == 'o':
+                stdscr.addch(sy, sx, ord('o'), curses.color_pair(1))
+            elif ch == '=':
+                stdscr.addch(sy, sx, ord('='), curses.color_pair(3))
+            else:
+                stdscr.addch(sy, sx, ord(' '), curses.color_pair(4))
+
+    stdscr.addch(height - 2, width // 2, ord('A'), curses.color_pair(2))
 
 
 def main(stdscr):
@@ -39,16 +41,13 @@ def main(stdscr):
     stdscr.nodelay(True)
     stdscr.keypad(True)
     curses.start_color()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # track edges
+    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # walls
     curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)  # player
-    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)
-    curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLUE)  # road surface
+    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)    # start line
+    curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLUE)    # ground
 
-    height, width = stdscr.getmaxyx()
-    center_x = width // 2
-    horizon = height // 4
-    track = Track()
-    player = Player()
+    game_map = Map.from_file('sample_map.txt')
+    player = Player(x=game_map.width / 2, y=game_map.height - 2)
 
     last_time = time.time()
     while True:
@@ -56,17 +55,17 @@ def main(stdscr):
         if key in (ord('q'), ord('Q')):
             break
         elif key == curses.KEY_LEFT:
-            player.move_left()
+            player.turn_left()
         elif key == curses.KEY_RIGHT:
-            player.move_right()
+            player.turn_right()
 
-        track.update()
+        player.throttle = key == ord(' ')
+        player.update()
 
         stdscr.erase()
-        draw_track(stdscr, center_x, horizon, track, player)
+        draw_scene(stdscr, game_map, player)
         stdscr.refresh()
 
-        # maintain frame rate
         elapsed = time.time() - last_time
         sleep_time = max(0, FRAME_DELAY - elapsed)
         time.sleep(sleep_time)
