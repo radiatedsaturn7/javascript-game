@@ -8,11 +8,11 @@ from player import Player
 from ai import AIPlayer, AIOrchestrator
 
 FRAME_DELAY = 1 / 30.0
-VIEW_DISTANCE = 20.0
-FOV = 0.7
+VIEW_DISTANCE = 30.0
+FOV = 1.2
 CHAR_RATIO = 0.5
-CAMERA_OFFSET = 2.0
-MAP_SCALE = 4.0
+CAMERA_OFFSET = 3.0
+MAP_SCALE = 5.0
 MINIMAP_MAX_SIZE = 10
 
 
@@ -339,8 +339,10 @@ def main(stdscr):
     last_time = time.time()
     key_timers = {}
 
+    KEY_HOLD_FRAMES = 6
+
     def press(k):
-        key_timers[k] = 3
+        key_timers[k] = KEY_HOLD_FRAMES
 
     while True:
         while True:
