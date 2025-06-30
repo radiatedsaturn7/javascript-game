@@ -1,10 +1,10 @@
-~~~~~~~~~~~~
+~~~~~~~~~~~~~~
 ~oooooooooooo~
-~o      J#        #o~
-~o        #        #o~
-~o===oooo    #o~
-~oHS oooo    #o~
-~oH                #o~
-~o          B      #o~
+~o      J# #o~
+~o       # #o~
+~o===oooo  #o~
+~oHS oooo  #o~
+~oH        #o~
+~o     B   #o~
 ~oooooooooooo~
 ~~~~~~~~~~~~~!
