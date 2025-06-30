@@ -1,6 +1,6 @@
-# 🏁 ASCII-F-ZERO: Terminal Velocity
+# 🏁 ASCII Racer: Terminal Velocity
 
-Welcome to **ASCII-F-ZERO**, the most violently nostalgic 2.5D racing game you never asked for.
+Welcome to **ASCII Racer**, the most violently nostalgic 2.5D racing game you never asked for.
 
 Blistering speed. Exploding pixels. A track made entirely of slashes and pipes.  
 This ain't just a game—it's a **high-octane hallucination in your terminal**.
@@ -49,7 +49,7 @@ _(Yeah, that's it—`curses` is built-in on Unix. Windows just needs a little he
 ## 🛠 Project Structure
 
 ```
-ascii-fzero/
+ascii-racer/
 ├── game.py             # Main game loop and render engine
 ├── track.py            # Track segment logic and generation
 ├── player.py           # Your scrappy little ASCII racer
