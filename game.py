@@ -140,18 +140,18 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(10)
                 else:
                     color = curses.color_pair(1)
-                draw = 'o'
+                draw = '█'
             elif ch == '~':
                 color = curses.color_pair(4)
-                draw = '~'
+                draw = '░'
             elif ch == 'J':
                 color = curses.color_pair(5)
-                draw = 'J'
+                draw = '▓'
             elif ch == '#':
                 color = curses.color_pair(6)
-                draw = '#'
+                draw = '▒'
             elif ch == '=':
-                draw = '#'
+                draw = '▓'
                 if (int(wx) + int(wy)) % 2 == 0:
                     color = curses.color_pair(7)
                 else:
@@ -173,7 +173,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
         pos = project(ai.x, ai.y)
         if pos:
             sx, sy = pos
-            if 0 <= sy < height and 0 <= sx < width:
+            if 0 <= sy < height - 1 and 0 <= sx < width - 1:
                 stdscr.addch(sy, sx, ord('A'), curses.color_pair(15))
 
     # draw player ship near bottom center showing orientation
@@ -326,8 +326,8 @@ def main(stdscr):
     player = Player(x=game_map.start_x * MAP_SCALE, y=game_map.start_y * MAP_SCALE)
     ai_players = [
         AIPlayer(
-            x=game_map.start_x * MAP_SCALE + 1 + (i % 3),
-            y=game_map.start_y * MAP_SCALE + (i // 3)
+            x=player.x,
+            y=player.y + (i + 1)
         )
         for i in range(31)
     ]
