@@ -5,6 +5,7 @@ import sys
 
 from map_loader import Map
 from player import Player
+from ai import AIPlayer
 
 FRAME_DELAY = 1 / 30.0
 VIEW_DISTANCE = 20.0
@@ -13,6 +14,18 @@ CHAR_RATIO = 0.5
 CAMERA_OFFSET = 2.0
 MAP_SCALE = 4.0
 MINIMAP_MAX_SIZE = 10
+
+
+def enter_fullscreen():
+    """Switch terminal to the alternate buffer."""
+    sys.stdout.write("\x1b[?1049h\x1b[H")
+    sys.stdout.flush()
+
+
+def exit_fullscreen():
+    """Return terminal from the alternate buffer."""
+    sys.stdout.write("\x1b[?1049l")
+    sys.stdout.flush()
 
 def load_background(path):
     lines = []
@@ -45,13 +58,15 @@ def format_time(t: float) -> str:
     return f"{m:02d}:{s:05.2f}"
 
 
-def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None):
+def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None, ai_players=None):
     height, width = stdscr.getmaxyx()
     horizon = height // 3
     if flash is None:
         flash = {'x': None, 'y': None, 'timer': 0}
     if background is None:
         background = BACKGROUND
+    if ai_players is None:
+        ai_players = []
 
     forward_x = math.sin(player.angle)
     forward_y = -math.cos(player.angle)
@@ -114,6 +129,24 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(10)
             stdscr.addch(sy, sx, ord(draw), color)
 
+    def project(x, y):
+        dx = x - cam_x
+        dy = y - cam_y
+        forward = dx * forward_x + dy * forward_y
+        right = dx * right_x + dy * right_y
+        if forward <= 0:
+            return None
+        sx = width // 2 + int((right / (forward * FOV)) * (width / 2) * CHAR_RATIO)
+        sy = horizon + int((1 - forward / VIEW_DISTANCE) * (height - horizon))
+        return sx, sy
+
+    for ai in ai_players:
+        pos = project(ai.x, ai.y)
+        if pos:
+            sx, sy = pos
+            if 0 <= sy < height and 0 <= sx < width:
+                stdscr.addch(sy, sx, ord('A'), curses.color_pair(15))
+
     # draw player ship near bottom center showing orientation
     def draw_ship():
         lines = ["   _|^|_", "--/O--O\\--"]
@@ -126,7 +159,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
         flame_lines = [flame_line]
         if player.speed > 0:
             flame_lines.append(flame_line)
-        start_y = height - 4
+        start_y = height - 4 - int(player.z)
         start_x = width // 2 - len(lines[0]) // 2
         for i, line in enumerate(lines):
             for j, ch in enumerate(line):
@@ -257,6 +290,7 @@ def main(stdscr):
 
     game_map = Map.from_file('sample_map.txt')
     player = Player(x=game_map.start_x * MAP_SCALE, y=game_map.start_y * MAP_SCALE)
+    ai_opponent = AIPlayer(x=game_map.start_x * MAP_SCALE + MAP_SCALE, y=game_map.start_y * MAP_SCALE)
     flash_wall = {'x': None, 'y': None, 'timer': 0}
 
     start_line_y = game_map.start_y * MAP_SCALE
@@ -280,6 +314,10 @@ def main(stdscr):
             player.turn_left()
         if key_timers.get(curses.KEY_RIGHT, 0) > 0:
             player.turn_right()
+        if key_timers.get(curses.KEY_UP, 0) > 0:
+            player.vertical_input(1)
+        if key_timers.get(curses.KEY_DOWN, 0) > 0:
+            player.vertical_input(-1)
 
         player.throttle = key_timers.get(ord(' '), 0) > 0
 
@@ -296,9 +334,13 @@ def main(stdscr):
 
         prev_x, prev_y = player.x, player.y
         player.update()
+        ai_opponent.update_ai(game_map)
+        tile = game_map.char_at(player.x / MAP_SCALE, player.y / MAP_SCALE)
         if prev_y < start_line_y <= player.y:
             player.complete_lap()
-        if game_map.char_at(player.x / MAP_SCALE, player.y / MAP_SCALE) == 'o':
+        if tile == 'J':
+            player.jump()
+        if tile == 'o':
             flash_wall['x'] = int(player.x)
             flash_wall['y'] = int(player.y)
             flash_wall['timer'] = 3
@@ -312,7 +354,7 @@ def main(stdscr):
                 break
 
         stdscr.erase()
-        draw_scene(stdscr, game_map, player, flash_wall)
+        draw_scene(stdscr, game_map, player, flash_wall, ai_players=[ai_opponent])
         stdscr.refresh()
 
         elapsed = time.time() - last_time

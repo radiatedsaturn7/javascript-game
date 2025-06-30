@@ -7,6 +7,8 @@ class Player:
     BASE_ACCEL = 0.02
     BOOST_ACCEL = 0.05
     BOOST_DURATION = 20  # frames
+    GRAVITY = -0.08
+    JUMP_VELOCITY = 1.2
 
     def __init__(self, x: float = 1.0, y: float = 1.0, health: int = 100):
         self.x = x
@@ -22,6 +24,9 @@ class Player:
         self.best_lap = None
         self._lap_start = time.time()
         self.start_time = time.time()
+        self.z = 0.0
+        self.z_speed = 0.0
+        self._z_input = 0.0
 
     def direction_arrow(self) -> str:
         """Return an ASCII arrow representing the facing direction."""
@@ -66,6 +71,17 @@ class Player:
         self.x += math.sin(self.angle) * self.speed
         self.y -= math.cos(self.angle) * self.speed
 
+        # vertical physics
+        if self.z > 0 or self.z_speed > 0:
+            self.z_speed += self.GRAVITY
+        if self._z_input != 0 and self.z > 0:
+            self.z_speed += self._z_input * 0.05
+        self.z += self.z_speed
+        if self.z <= 0:
+            self.z = 0
+            self.z_speed = 0
+        self._z_input = 0.0
+
     def start_boost(self):
         if self._boost_frames > 0:
             return
@@ -80,6 +96,14 @@ class Player:
         else:
             self._boost_frames = self.BOOST_DURATION
             self.health -= cost
+
+    def jump(self):
+        if self.z == 0:
+            self.z_speed = self.JUMP_VELOCITY
+
+    def vertical_input(self, direction: float):
+        """direction >0 to rise, <0 to fall faster"""
+        self._z_input = direction
 
     @property
     def boosting(self) -> bool:
