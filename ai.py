@@ -11,26 +11,28 @@ class AIPlayer(Player):
         self.difficulty = difficulty
 
     def _score_direction(self, ang: float, look_dist: float, game_map) -> float:
-        """Score a direction based on the tile at the lookahead location."""
-        lx = self.x + math.sin(ang) * look_dist
-        ly = self.y - math.cos(ang) * look_dist
-        tile = game_map.char_at(lx / 5.0, ly / 5.0)
+        """Score a direction based on several lookahead checks."""
+        distances = [look_dist * f for f in (0.5, 1.0, 1.5)]
         score = 0.0
-        if tile == 'o':
-            score -= 5
-        else:
-            score += 1
-            if tile == 'B':
-                score += 3
-            if tile == 'J':
-                score += 2
-            if tile == 'H' and self.health < 80:
-                score += 2
-        return score
+        for dist in distances:
+            lx = self.x + math.sin(ang) * dist
+            ly = self.y - math.cos(ang) * dist
+            tile = game_map.char_at(lx / 5.0, ly / 5.0)
+            if tile == 'o':
+                score -= 5
+            else:
+                score += 1
+                if tile == 'B':
+                    score += 3
+                if tile == 'J':
+                    score += 2
+                if tile == 'H' and self.health < 80:
+                    score += 2
+        return score / len(distances)
 
     def update_ai(self, game_map):
         look_dist = 3.0
-        angles = [-0.3, 0.0, 0.3]
+        angles = [-0.4, -0.2, 0.0, 0.2, 0.4]
         scores = [self._score_direction(self.angle + a, look_dist, game_map) for a in angles]
         best_idx = scores.index(max(scores))
         if angles[best_idx] < 0:
