@@ -9,6 +9,8 @@ FRAME_DELAY = 1 / 30.0
 VIEW_DISTANCE = 20.0
 FOV = 0.7
 
+MINIMAP_MAX_SIZE = 10
+
 
 def draw_scene(stdscr, game_map: Map, player: Player):
     height, width = stdscr.getmaxyx()
@@ -31,9 +33,60 @@ def draw_scene(stdscr, game_map: Map, player: Player):
             elif ch == '=':
                 stdscr.addch(sy, sx, ord('='), curses.color_pair(3))
             else:
-                stdscr.addch(sy, sx, ord(' '), curses.color_pair(4))
+                stdscr.addch(sy, sx, ord(' '), curses.color_pair(5))
 
-    stdscr.addch(height - 2, width // 2, ord('A'), curses.color_pair(2))
+    # draw player ship as blue triangle near bottom center
+    stdscr.addch(height - 2, width // 2, ord('^'), curses.color_pair(2))
+
+    # draw minimap in the top-left corner
+    mini_h = min(game_map.height, MINIMAP_MAX_SIZE)
+    mini_w = min(game_map.width, MINIMAP_MAX_SIZE)
+    for my in range(mini_h):
+        if my >= height:
+            break
+        for mx in range(mini_w):
+            if mx >= width:
+                break
+            char = game_map.char_at(mx, my)
+            color = curses.color_pair(5)  # track by default
+            if char == 'o':
+                color = curses.color_pair(1)
+            elif char == '=':
+                color = curses.color_pair(3)
+            elif char != ' ':
+                color = curses.color_pair(4)
+            draw_char = char
+            if int(player.x) == mx and int(player.y) == my:
+                draw_char = '^'
+                color = curses.color_pair(2)
+            stdscr.addch(my, mx, ord(draw_char), color)
+
+    # draw health bar at top right (scaled to 10 segments)
+    max_len = 10
+    filled = max(0, min(max_len, int((player.health / 100) * max_len)))
+    health_str = 'HP:[' + '#' * filled + ' ' * (max_len - filled) + ']'
+    start_x = max(0, width - len(health_str) - 1)
+    for idx, ch in enumerate(health_str):
+        if start_x + idx < width:
+            color = curses.color_pair(3) if ch == '#' else curses.color_pair(4)
+            stdscr.addch(0, start_x + idx, ord(ch), color)
+
+
+def explosion_animation(stdscr, width, height):
+    """Simple explosion effect when health reaches zero."""
+    frames = ['***', '###', '   ']
+    center_y = height - 2
+    center_x = width // 2
+    for frame in frames:
+        for dy in range(-1, 2):
+            for dx in range(-1, 2):
+                ch = frame[(dy + 1)] if abs(dy) == abs(dx) else frame[1]
+                y = center_y + dy
+                x = center_x + dx
+                if 0 <= y < height and 0 <= x < width:
+                    stdscr.addch(y, x, ord(ch), curses.color_pair(6))
+        stdscr.refresh()
+        time.sleep(0.15)
 
 
 def main(stdscr):
@@ -42,25 +95,62 @@ def main(stdscr):
     stdscr.keypad(True)
     curses.start_color()
     curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # walls
-    curses.init_pair(2, curses.COLOR_GREEN, curses.COLOR_BLACK)  # player
+    curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)   # player ship
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)    # start line
-    curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLUE)    # ground
+    curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)  # grass
+    curses.init_pair(5, curses.COLOR_WHITE, curses.COLOR_BLACK)  # track
+    curses.init_pair(6, curses.COLOR_YELLOW, curses.COLOR_RED)   # explosion
 
     game_map = Map.from_file('sample_map.txt')
     player = Player(x=game_map.width / 2, y=game_map.height - 2)
 
     last_time = time.time()
+    left_timer = right_timer = throttle_timer = 0
+    boost_request = False
     while True:
-        key = stdscr.getch()
-        if key in (ord('q'), ord('Q')):
-            break
-        elif key == curses.KEY_LEFT:
-            player.turn_left()
-        elif key == curses.KEY_RIGHT:
-            player.turn_right()
+        keys = []
+        while True:
+            key = stdscr.getch()
+            if key == -1:
+                break
+            keys.append(key)
 
-        player.throttle = key == ord(' ')
+        for key in keys:
+            if key in (ord('q'), ord('Q')):
+                return
+            elif key == curses.KEY_LEFT:
+                left_timer = 3
+            elif key == curses.KEY_RIGHT:
+                right_timer = 3
+            elif key == ord(' '):
+                throttle_timer = 3
+            elif key in (ord('b'), ord('B')):
+                boost_request = True
+
+        if left_timer > 0:
+            player.turn_left()
+            left_timer -= 1
+        if right_timer > 0:
+            player.turn_right()
+            right_timer -= 1
+
+        player.throttle = throttle_timer > 0
+        if throttle_timer > 0:
+            throttle_timer -= 1
+        if boost_request:
+            player.start_boost()
+            boost_request = False
+
+        prev_x, prev_y = player.x, player.y
         player.update()
+        if game_map.char_at(player.x, player.y) == 'o':
+            player.x, player.y = prev_x, prev_y
+            player.speed = 0
+            player.health -= 1
+            if player.health <= 0:
+                height, width = stdscr.getmaxyx()
+                explosion_animation(stdscr, width, height)
+                break
 
         stdscr.erase()
         draw_scene(stdscr, game_map, player)
