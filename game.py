@@ -1,6 +1,7 @@
 import curses
 import time
 import math
+import sys
 
 from map_loader import Map
 from player import Player
@@ -10,10 +11,8 @@ VIEW_DISTANCE = 20.0
 FOV = 0.7
 CHAR_RATIO = 0.5
 CAMERA_OFFSET = 2.0
-MAP_SCALE = 2.0
-
+MAP_SCALE = 4.0
 MINIMAP_MAX_SIZE = 10
-
 
 def load_background(path):
     lines = []
@@ -145,14 +144,16 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     stdscr.addch(y, x, ord(ch), color)
     draw_ship()
 
-    # draw minimap in the top-left corner
+    # draw minimap in the top-left corner with a border
     mini_h = min(game_map.height, MINIMAP_MAX_SIZE)
     mini_w = min(game_map.width, MINIMAP_MAX_SIZE)
+    start_y = 1
+    start_x = 1
     for my in range(mini_h):
-        if my >= height:
+        if start_y + my >= height:
             break
         for mx in range(mini_w):
-            if mx >= width:
+            if start_x + mx >= width:
                 break
             char = game_map.char_at(mx, my)
             color = curses.color_pair(3)  # road by default
@@ -170,7 +171,22 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
             if int(player.x / MAP_SCALE) == mx and int(player.y / MAP_SCALE) == my:
                 draw_char = player.direction_arrow()
                 color = curses.color_pair(2)
-            stdscr.addch(my, mx, ord(draw_char), color)
+            stdscr.addch(start_y + my, start_x + mx, ord(draw_char), color)
+
+    # minimap border
+    if start_y - 1 >= 0 and start_x - 1 >= 0:
+        for x in range(mini_w + 2):
+            if start_x - 1 + x < width:
+                stdscr.addch(start_y - 1, start_x - 1 + x, ord('#'), curses.color_pair(4))
+        for x in range(mini_w + 2):
+            if start_x - 1 + x < width and start_y + mini_h < height:
+                stdscr.addch(start_y + mini_h, start_x - 1 + x, ord('#'), curses.color_pair(4))
+        for y in range(mini_h):
+            if start_y + y < height:
+                if start_x - 1 >= 0:
+                    stdscr.addch(start_y + y, start_x - 1, ord('#'), curses.color_pair(4))
+                if start_x + mini_w < width:
+                    stdscr.addch(start_y + y, start_x + mini_w, ord('#'), curses.color_pair(4))
 
     # draw health bar at top right (scaled to 10 segments)
     max_len = 10
@@ -246,41 +262,34 @@ def main(stdscr):
     start_line_y = game_map.start_y * MAP_SCALE
 
     last_time = time.time()
-    left_timer = right_timer = throttle_timer = 0
-    boost_request = False
+    key_timers = {}
+
+    def press(k):
+        key_timers[k] = 3
+
     while True:
-        keys = []
         while True:
             key = stdscr.getch()
             if key == -1:
                 break
-            keys.append(key)
-
-        for key in keys:
             if key in (ord('q'), ord('Q')):
                 return
-            elif key == curses.KEY_LEFT:
-                left_timer = 3
-            elif key == curses.KEY_RIGHT:
-                right_timer = 3
-            elif key == ord(' '):
-                throttle_timer = 3
-            elif key in (ord('b'), ord('B')):
-                boost_request = True
+            press(key)
 
-        if left_timer > 0:
+        if key_timers.get(curses.KEY_LEFT, 0) > 0:
             player.turn_left()
-            left_timer -= 1
-        if right_timer > 0:
+        if key_timers.get(curses.KEY_RIGHT, 0) > 0:
             player.turn_right()
-            right_timer -= 1
 
-        player.throttle = throttle_timer > 0
-        if throttle_timer > 0:
-            throttle_timer -= 1
-        if boost_request:
+        player.throttle = key_timers.get(ord(' '), 0) > 0
+
+        if key_timers.get(ord('b'), 0) > 0 or key_timers.get(ord('B'), 0) > 0:
             player.start_boost()
-            boost_request = False
+
+        for k in list(key_timers.keys()):
+            key_timers[k] -= 1
+            if key_timers[k] <= 0:
+                del key_timers[k]
 
         if flash_wall['timer'] > 0:
             flash_wall['timer'] -= 1
@@ -313,4 +322,8 @@ def main(stdscr):
 
 
 if __name__ == "__main__":
-    curses.wrapper(main)
+    enter_fullscreen()
+    try:
+        curses.wrapper(main)
+    finally:
+        exit_fullscreen()
