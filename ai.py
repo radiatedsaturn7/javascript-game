@@ -1,36 +1,72 @@
 from player import Player
 import math
 
+
 class AIPlayer(Player):
-    """Simple AI driver that follows the track."""
-    def __init__(self, *args, **kwargs):
+    """Improved AI driver that prefers boosts and avoids obstacles."""
+
+    def __init__(self, *args, difficulty: float = 1.0, **kwargs):
         super().__init__(*args, **kwargs)
         self.throttle = True
+        self.difficulty = difficulty
+
+    def _score_direction(self, ang: float, look_dist: float, game_map) -> float:
+        """Score a direction based on the tile at the lookahead location."""
+        lx = self.x + math.sin(ang) * look_dist
+        ly = self.y - math.cos(ang) * look_dist
+        tile = game_map.char_at(lx / 4.0, ly / 4.0)
+        score = 0.0
+        if tile == 'o':
+            score -= 5
+        else:
+            score += 1
+            if tile == 'B':
+                score += 3
+            if tile == 'J':
+                score += 2
+            if tile == 'H' and self.health < 80:
+                score += 2
+        return score
 
     def update_ai(self, game_map):
-        # Look ahead and steer away from walls
-        look_dist = 2.0
+        look_dist = 3.0
+        angles = [-0.3, 0.0, 0.3]
+        scores = [self._score_direction(self.angle + a, look_dist, game_map) for a in angles]
+        best_idx = scores.index(max(scores))
+        if angles[best_idx] < 0:
+            self.turn_left()
+        elif angles[best_idx] > 0:
+            self.turn_right()
+
+        # throttle only if the path ahead is clear
         front_x = self.x + math.sin(self.angle) * look_dist
         front_y = self.y - math.cos(self.angle) * look_dist
         front = game_map.char_at(front_x / 4.0, front_y / 4.0)
-        if front == 'o':
-            # try turning
-            left_a = self.angle - 0.4
-            left_x = self.x + math.sin(left_a) * look_dist
-            left_y = self.y - math.cos(left_a) * look_dist
-            right_a = self.angle + 0.4
-            right_x = self.x + math.sin(right_a) * look_dist
-            right_y = self.y - math.cos(right_a) * look_dist
-            left = game_map.char_at(left_x / 4.0, left_y / 4.0)
-            right = game_map.char_at(right_x / 4.0, right_y / 4.0)
-            if left != 'o':
-                self.turn_left()
-            elif right != 'o':
-                self.turn_right()
-            else:
-                self.turn_left()
-        else:
-            # small random jitter to simulate steering
-            pass
+        self.throttle = front != 'o'
         super().update()
+
+
+class AIOrchestrator:
+    """Adjust overall AI difficulty to keep the race interesting."""
+
+    def __init__(self, player: Player, ai_players: list):
+        self.player = player
+        self.ai_players = ai_players
+
+    def _progress(self, racer, game_map) -> float:
+        start_x = game_map.start_x * 4.0
+        start_y = game_map.start_y * 4.0
+        return math.hypot(racer.x - start_x, racer.y - start_y)
+
+    def update(self, game_map):
+        player_prog = self._progress(self.player, game_map)
+        ai_progs = [self._progress(ai, game_map) for ai in self.ai_players]
+        best_ai = max(ai_progs) if ai_progs else 0.0
+
+        for ai in self.ai_players:
+            if player_prog - best_ai > 20:
+                ai.BASE_ACCEL = min(0.03, ai.BASE_ACCEL + 0.005)
+            elif best_ai - player_prog > 20:
+                ai.BASE_ACCEL = max(0.015, ai.BASE_ACCEL - 0.005)
+            ai.update_ai(game_map)
 

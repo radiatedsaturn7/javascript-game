@@ -5,7 +5,7 @@ import sys
 
 from map_loader import Map
 from player import Player
-from ai import AIPlayer
+from ai import AIPlayer, AIOrchestrator
 
 FRAME_DELAY = 1 / 30.0
 VIEW_DISTANCE = 20.0
@@ -37,7 +37,18 @@ def load_background(path):
     return lines
 
 
+def load_ascii_art(path):
+    lines = []
+    with open(path, 'r') as f:
+        for line in f:
+            if line.strip() == 'KEY:':
+                break
+            lines.append(line.rstrip('\n'))
+    return lines
+
+
 BACKGROUND = load_background('sample_background.txt')
+TITLE_ART = load_ascii_art('title.txt')
 BG_COLOR_MAP = {
     '|': 13,
     '_': 13,
@@ -56,6 +67,24 @@ def format_time(t: float) -> str:
     m = int(t // 60)
     s = t % 60
     return f"{m:02d}:{s:05.2f}"
+
+
+def show_title_screen(stdscr):
+    """Display the ASCII title screen and wait for space to continue."""
+    stdscr.erase()
+    height, width = stdscr.getmaxyx()
+    start_y = max(0, (height - len(TITLE_ART)) // 2)
+    for idx, line in enumerate(TITLE_ART):
+        x = max(0, (width - len(line)) // 2)
+        if start_y + idx < height:
+            stdscr.addstr(start_y + idx, x, line[: max(0, width - x)])
+    stdscr.refresh()
+    while True:
+        ch = stdscr.getch()
+        if ch in (ord('q'), ord('Q')):
+            return False
+        if ch == ord(' '):
+            return True
 
 
 def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None, ai_players=None):
@@ -266,7 +295,7 @@ def explosion_animation(stdscr, width, height):
 
 def main(stdscr):
     curses.curs_set(0)
-    stdscr.nodelay(True)
+    stdscr.nodelay(False)
     stdscr.keypad(True)
     curses.start_color()
     curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)   # wall
@@ -286,11 +315,23 @@ def main(stdscr):
     curses.init_pair(15, curses.COLOR_GREEN, curses.COLOR_BLACK)   # green
     curses.init_pair(16, curses.COLOR_GREEN, curses.COLOR_BLACK)   # dark green
     curses.init_pair(17, curses.COLOR_RED, curses.COLOR_BLACK)     # blink bright
+
     curses.init_pair(18, curses.COLOR_RED, curses.COLOR_BLACK)     # blink dark
+
+    if not show_title_screen(stdscr):
+        return
+    stdscr.nodelay(True)
 
     game_map = Map.from_file('sample_map.txt')
     player = Player(x=game_map.start_x * MAP_SCALE, y=game_map.start_y * MAP_SCALE)
-    ai_opponent = AIPlayer(x=game_map.start_x * MAP_SCALE + MAP_SCALE, y=game_map.start_y * MAP_SCALE)
+    ai_players = [
+        AIPlayer(
+            x=game_map.start_x * MAP_SCALE + 1 + (i % 3),
+            y=game_map.start_y * MAP_SCALE + (i // 3)
+        )
+        for i in range(31)
+    ]
+    orchestrator = AIOrchestrator(player, ai_players)
     flash_wall = {'x': None, 'y': None, 'timer': 0}
 
     start_line_y = game_map.start_y * MAP_SCALE
@@ -334,7 +375,7 @@ def main(stdscr):
 
         prev_x, prev_y = player.x, player.y
         player.update()
-        ai_opponent.update_ai(game_map)
+        orchestrator.update(game_map)
         tile = game_map.char_at(player.x / MAP_SCALE, player.y / MAP_SCALE)
         if prev_y < start_line_y <= player.y:
             player.complete_lap()
@@ -354,7 +395,7 @@ def main(stdscr):
                 break
 
         stdscr.erase()
-        draw_scene(stdscr, game_map, player, flash_wall, ai_players=[ai_opponent])
+        draw_scene(stdscr, game_map, player, flash_wall, ai_players=ai_players)
         stdscr.refresh()
 
         elapsed = time.time() - last_time
