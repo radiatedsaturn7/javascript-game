@@ -35,8 +35,9 @@ def draw_scene(stdscr, game_map: Map, player: Player):
             else:
                 stdscr.addch(sy, sx, ord(' '), curses.color_pair(5))
 
-    # draw player ship as blue triangle near bottom center
-    stdscr.addch(height - 2, width // 2, ord('^'), curses.color_pair(2))
+    # draw player ship near bottom center showing orientation
+    ship_char = player.direction_arrow()
+    stdscr.addch(height - 2, width // 2, ord(ship_char), curses.color_pair(2))
 
     # draw minimap in the top-left corner
     mini_h = min(game_map.height, MINIMAP_MAX_SIZE)
@@ -57,7 +58,7 @@ def draw_scene(stdscr, game_map: Map, player: Player):
                 color = curses.color_pair(4)
             draw_char = char
             if int(player.x) == mx and int(player.y) == my:
-                draw_char = '^'
+                draw_char = player.direction_arrow()
                 color = curses.color_pair(2)
             stdscr.addch(my, mx, ord(draw_char), color)
 

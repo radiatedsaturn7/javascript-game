@@ -4,6 +4,7 @@ from unittest.mock import patch
 from map_loader import Map
 from player import Player
 import game
+import math
 
 
 class DummyScreen:
@@ -50,6 +51,17 @@ class PlayerTests(unittest.TestCase):
         p.throttle = False
         p.update()
         self.assertLessEqual(p.speed, 1.0)
+
+    def test_direction_arrow(self):
+        p = Player()
+        p.angle = 0.0
+        self.assertEqual(p.direction_arrow(), '^')
+        p.angle = math.pi / 2
+        self.assertEqual(p.direction_arrow(), '>')
+        p.angle = math.pi
+        self.assertEqual(p.direction_arrow(), 'v')
+        p.angle = 3 * math.pi / 2
+        self.assertEqual(p.direction_arrow(), '<')
 
 
 class TrackTests(unittest.TestCase):
