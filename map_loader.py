@@ -6,6 +6,17 @@ class Map:
         self.height = len(self.lines)
         self.width = max(len(line) for line in self.lines) if self.lines else 0
 
+        self.start_x = 1
+        self.start_y = self.height - 2
+        for y, line in enumerate(self.lines):
+            x = line.find('S')
+            if x != -1:
+                self.start_x = x
+                self.start_y = y
+                # remove the start marker so it is treated as driveable
+                self.lines[y] = line.replace('S', ' ', 1)
+                break
+
     @classmethod
     def from_file(cls, path):
         with open(path, 'r') as f:
