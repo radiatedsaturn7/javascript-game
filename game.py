@@ -93,18 +93,23 @@ def show_title_screen(stdscr):
             return True
 
 
-def countdown(stdscr):
-    """Display a short countdown before the race starts."""
+def countdown(stdscr, draw_cb=None):
+    """Display a short countdown before the race starts.
+
+    If ``draw_cb`` is provided, it will be called each frame to draw the
+    scene so the track and ships remain visible behind the timer.
+    """
     height, width = stdscr.getmaxyx()
     for text in ["3", "2", "1", "GO!"]:
-        stdscr.erase()
+        if draw_cb:
+            draw_cb()
         y = height // 2
         x = max(0, (width - len(text)) // 2)
         stdscr.addstr(y, x, text, curses.color_pair(14))
         stdscr.refresh()
         time.sleep(1)
-    stdscr.erase()
-    stdscr.refresh()
+    if draw_cb:
+        draw_cb()
 
 
 def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None, ai_players=None):
@@ -171,10 +176,10 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                 angle_to_cell = math.atan2(wy - cam_y, wx - cam_x)
                 rel_ang = abs((angle_to_cell - player.angle + math.pi) % (2 * math.pi) - math.pi)
                 shade_idx = min(3, int(rel_ang / (math.pi / 6)))
+                if any(n != 'o' for n in neighbors):
+                    shade_idx = min(shade_idx + 1, 3)
                 shades = ['█', '▓', '▒', '░']
                 draw = shades[shade_idx]
-                if any(n != 'o' for n in neighbors) and shade_idx == 0:
-                    draw = '▓'
             elif ch == '~':
                 color = curses.color_pair(4)
                 draw = '░'
@@ -363,8 +368,6 @@ def main(stdscr):
 
     if not show_title_screen(stdscr):
         return
-    countdown(stdscr)
-    stdscr.nodelay(True)
 
     game_map = Map.from_file('sample_map.txt')
     player = Player(x=game_map.start_x * MAP_SCALE, y=game_map.start_y * MAP_SCALE)
@@ -377,6 +380,15 @@ def main(stdscr):
     ]
     orchestrator = AIOrchestrator(player, ai_players)
     flash_wall = {'x': None, 'y': None, 'timer': 0}
+
+    def draw_start_scene():
+        stdscr.erase()
+        draw_scene(stdscr, game_map, player, flash_wall, ai_players=ai_players)
+        stdscr.refresh()
+
+    draw_start_scene()
+    countdown(stdscr, draw_cb=draw_start_scene)
+    stdscr.nodelay(True)
 
     start_line_y = game_map.start_y * MAP_SCALE
 
