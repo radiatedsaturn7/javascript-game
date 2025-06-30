@@ -12,21 +12,7 @@ FOV = 0.7
 CHAR_RATIO = 0.5
 CAMERA_OFFSET = 2.0
 MAP_SCALE = 4.0
-
 MINIMAP_MAX_SIZE = 10
-
-
-def enter_fullscreen():
-    """Attempt to switch the terminal to fullscreen/alternate screen mode."""
-    sys.stdout.write("\x1b[?1049h\x1b[H\x1b[9;1t")
-    sys.stdout.flush()
-
-
-def exit_fullscreen():
-    """Return terminal to normal screen mode."""
-    sys.stdout.write("\x1b[?1049l")
-    sys.stdout.flush()
-
 
 def load_background(path):
     lines = []
