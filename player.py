@@ -15,6 +15,20 @@ class Player:
         self.throttle = False
         self.health = health
         self._boost_frames = 0
+        self.lean = 0.0
+        self.frame = 0
+
+    def direction_arrow(self) -> str:
+        """Return an ASCII arrow representing the facing direction."""
+        angle = self.angle % (2 * math.pi)
+        if angle < math.pi / 4 or angle >= 7 * math.pi / 4:
+            return '^'
+        elif angle < 3 * math.pi / 4:
+            return '>'
+        elif angle < 5 * math.pi / 4:
+            return 'v'
+        else:
+            return '<'
 
     def direction_arrow(self) -> str:
         """Return an ASCII arrow representing the facing direction."""
@@ -30,9 +44,11 @@ class Player:
 
     def turn_left(self):
         self.angle -= 0.1
+        self.lean = max(self.lean - 0.5, -1.0)
 
     def turn_right(self):
         self.angle += 0.1
+        self.lean = min(self.lean + 0.5, 1.0)
 
     def update(self):
         accel = self.BOOST_ACCEL if self._boost_frames > 0 else self.BASE_ACCEL
@@ -45,6 +61,14 @@ class Player:
 
         if self._boost_frames > 0:
             self._boost_frames -= 1
+
+        # slowly return lean to neutral
+        if self.lean > 0:
+            self.lean = max(0, self.lean - 0.1)
+        elif self.lean < 0:
+            self.lean = min(0, self.lean + 0.1)
+
+        self.frame = (self.frame + 1) % 2
 
         self.x += math.sin(self.angle) * self.speed
         self.y -= math.cos(self.angle) * self.speed
@@ -63,3 +87,8 @@ class Player:
         else:
             self._boost_frames = self.BOOST_DURATION
             self.health -= cost
+
+    @property
+    def boosting(self) -> bool:
+        """Return True while boost is active."""
+        return self._boost_frames > 0

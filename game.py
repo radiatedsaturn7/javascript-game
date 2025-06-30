@@ -12,9 +12,11 @@ FOV = 0.7
 MINIMAP_MAX_SIZE = 10
 
 
-def draw_scene(stdscr, game_map: Map, player: Player):
+def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
     height, width = stdscr.getmaxyx()
     horizon = height // 3
+    if flash is None:
+        flash = {'x': None, 'y': None, 'timer': 0}
 
     forward_x = math.sin(player.angle)
     forward_y = -math.cos(player.angle)
@@ -26,22 +28,62 @@ def draw_scene(stdscr, game_map: Map, player: Player):
     cam_y = player.y - forward_y
 
     for sy in range(horizon, height - 1):
-        depth = ((sy - horizon + 1) / (height - horizon)) * VIEW_DISTANCE
+        depth = ((height - sy) / (height - horizon)) * VIEW_DISTANCE
         for sx in range(width - 1):
             offset = ((sx - width / 2) / (width / 2)) * depth * FOV
             wx = cam_x + forward_x * depth + right_x * offset
             wy = cam_y + forward_y * depth + right_y * offset
             ch = game_map.char_at(wx, wy)
-            if ch in ('o', '~'):
-                stdscr.addch(sy, sx, ord(ch), curses.color_pair(1))
+            draw = ' '
+            color = curses.color_pair(3)
+            if ch == 'o':
+                if flash['timer'] > 0 and flash['x'] == int(wx) and flash['y'] == int(wy):
+                    color = curses.color_pair(10)
+                else:
+                    color = curses.color_pair(1)
+                draw = 'o'
+            elif ch == '~':
+                color = curses.color_pair(4)
+                draw = '~'
+            elif ch == 'J':
+                color = curses.color_pair(5)
+                draw = 'J'
+            elif ch == '#':
+                color = curses.color_pair(6)
+                draw = '#'
             elif ch == '=':
-                stdscr.addch(sy, sx, ord('='), curses.color_pair(3))
-            else:
-                stdscr.addch(sy, sx, ord(' '), curses.color_pair(5))
+                draw = '#'
+                if (int(wx) + int(wy)) % 2 == 0:
+                    color = curses.color_pair(7)
+                else:
+                    color = curses.color_pair(10)
+            stdscr.addch(sy, sx, ord(draw), color)
 
     # draw player ship near bottom center showing orientation
-    ship_char = player.direction_arrow()
-    stdscr.addch(height - 2, width // 2, ord(ship_char), curses.color_pair(2))
+    def draw_ship():
+        lines = ["   _|^|_", "--/O--O\\--"]
+        flames = "oo" if player.frame % 2 == 0 else "OO"
+        if player.lean < -0.5:
+            lines = ["  _/|^|_", "-/O--O\\---"]
+        elif player.lean > 0.5:
+            lines = [" _|^|_\\ ", "---/O--O\\-"]
+        flame_line = f"   {flames[0]}  {flames[1]}"
+        start_y = height - 4
+        start_x = width // 2 - len(lines[0]) // 2
+        for i, line in enumerate(lines):
+            for j, ch in enumerate(line):
+                y = start_y + i
+                x = start_x + j
+                if 0 <= y < height and 0 <= x < width:
+                    stdscr.addch(y, x, ord(ch), curses.color_pair(2))
+        i = len(lines)
+        for j, ch in enumerate(flame_line):
+            y = start_y + i
+            x = start_x + j
+            if 0 <= y < height and 0 <= x < width:
+                color = curses.color_pair(9) if player.boosting else curses.color_pair(8)
+                stdscr.addch(y, x, ord(ch), color)
+    draw_ship()
 
     # draw minimap in the top-left corner
     mini_h = min(game_map.height, MINIMAP_MAX_SIZE)
@@ -53,13 +95,17 @@ def draw_scene(stdscr, game_map: Map, player: Player):
             if mx >= width:
                 break
             char = game_map.char_at(mx, my)
-            color = curses.color_pair(5)  # track by default
-            if char in ('o', '~'):
+            color = curses.color_pair(3)  # road by default
+            if char == 'o':
                 color = curses.color_pair(1)
-            elif char == '=':
-                color = curses.color_pair(3)
-            elif char != ' ':
+            elif char == '~':
                 color = curses.color_pair(4)
+            elif char == 'J':
+                color = curses.color_pair(5)
+            elif char == '#':
+                color = curses.color_pair(6)
+            elif char == '=':
+                color = curses.color_pair(7)
             draw_char = char
             if int(player.x) == mx and int(player.y) == my:
                 draw_char = player.direction_arrow()
@@ -96,7 +142,7 @@ def explosion_animation(stdscr, width, height):
                 y = center_y + dy
                 x = center_x + dx
                 if 0 <= y < height and 0 <= x < width:
-                    stdscr.addch(y, x, ord(ch), curses.color_pair(6))
+                    stdscr.addch(y, x, ord(ch), curses.color_pair(11))
         stdscr.refresh()
         time.sleep(0.15)
 
@@ -106,15 +152,21 @@ def main(stdscr):
     stdscr.nodelay(True)
     stdscr.keypad(True)
     curses.start_color()
-    curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)  # obstacles
-    curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)   # player ship
-    curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)    # start line
-    curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)   # minimap features
-    curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_BLACK)  # drivable track
-    curses.init_pair(6, curses.COLOR_YELLOW, curses.COLOR_RED)   # explosion
+    curses.init_pair(1, curses.COLOR_YELLOW, curses.COLOR_BLACK)   # wall
+    curses.init_pair(2, curses.COLOR_WHITE, curses.COLOR_BLACK)    # ship body
+    curses.init_pair(3, curses.COLOR_WHITE, curses.COLOR_BLACK)    # road
+    curses.init_pair(4, curses.COLOR_BLUE, curses.COLOR_BLACK)     # water
+    curses.init_pair(5, curses.COLOR_CYAN, curses.COLOR_BLACK)     # jump pad
+    curses.init_pair(6, curses.COLOR_MAGENTA, curses.COLOR_BLACK)  # dirt
+    curses.init_pair(7, curses.COLOR_WHITE, curses.COLOR_BLACK)    # start line checker
+    curses.init_pair(8, curses.COLOR_RED, curses.COLOR_BLACK)      # flame
+    curses.init_pair(9, curses.COLOR_BLUE, curses.COLOR_BLACK)     # boost flame
+    curses.init_pair(10, curses.COLOR_BLACK, curses.COLOR_BLACK)   # empty / flash
+    curses.init_pair(11, curses.COLOR_YELLOW, curses.COLOR_RED)    # explosion
 
     game_map = Map.from_file('sample_map.txt')
     player = Player(x=game_map.start_x, y=game_map.start_y)
+    flash_wall = {'x': None, 'y': None, 'timer': 0}
 
     last_time = time.time()
     left_timer = right_timer = throttle_timer = 0
@@ -153,11 +205,18 @@ def main(stdscr):
             player.start_boost()
             boost_request = False
 
+        if flash_wall['timer'] > 0:
+            flash_wall['timer'] -= 1
+
         prev_x, prev_y = player.x, player.y
         player.update()
         if game_map.char_at(player.x, player.y) == 'o':
-            player.x, player.y = prev_x, prev_y
-            player.speed = 0
+            flash_wall['x'] = int(player.x)
+            flash_wall['y'] = int(player.y)
+            flash_wall['timer'] = 3
+            player.x = prev_x - math.sin(player.angle) * 0.5
+            player.y = prev_y + math.cos(player.angle) * 0.5
+            player.speed = -0.2
             player.health -= 1
             if player.health <= 0:
                 height, width = stdscr.getmaxyx()
@@ -165,7 +224,7 @@ def main(stdscr):
                 break
 
         stdscr.erase()
-        draw_scene(stdscr, game_map, player)
+        draw_scene(stdscr, game_map, player, flash_wall)
         stdscr.refresh()
 
         elapsed = time.time() - last_time
