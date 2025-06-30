@@ -8,10 +8,16 @@ from player import Player
 from ai import AIPlayer, AIOrchestrator
 
 FRAME_DELAY = 1 / 30.0
-VIEW_DISTANCE = 30.0
-FOV = 1.2
+# Rendering constants
+# Increase view distance so the track stretches further out and appears less
+# like a vertical ramp.
+VIEW_DISTANCE = 60.0
+
+# Slightly narrower field of view and a camera a bit closer to the player help
+# reduce the "quarter-pipe" appearance.
+FOV = 1.0
 CHAR_RATIO = 0.5
-CAMERA_OFFSET = 3.0
+CAMERA_OFFSET = 2.0
 MAP_SCALE = 5.0
 MINIMAP_MAX_SIZE = 10
 
@@ -87,6 +93,20 @@ def show_title_screen(stdscr):
             return True
 
 
+def countdown(stdscr):
+    """Display a short countdown before the race starts."""
+    height, width = stdscr.getmaxyx()
+    for text in ["3", "2", "1", "GO!"]:
+        stdscr.erase()
+        y = height // 2
+        x = max(0, (width - len(text)) // 2)
+        stdscr.addstr(y, x, text, curses.color_pair(14))
+        stdscr.refresh()
+        time.sleep(1)
+    stdscr.erase()
+    stdscr.refresh()
+
+
 def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None, ai_players=None):
     height, width = stdscr.getmaxyx()
     horizon = height // 3
@@ -148,7 +168,13 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     for dy in (-1, 0, 1)
                     if not (dx == 0 and dy == 0)
                 ]
-                draw = '▓' if any(n != 'o' for n in neighbors) else '█'
+                angle_to_cell = math.atan2(wy - cam_y, wx - cam_x)
+                rel_ang = abs((angle_to_cell - player.angle + math.pi) % (2 * math.pi) - math.pi)
+                shade_idx = min(3, int(rel_ang / (math.pi / 6)))
+                shades = ['█', '▓', '▒', '░']
+                draw = shades[shade_idx]
+                if any(n != 'o' for n in neighbors) and shade_idx == 0:
+                    draw = '▓'
             elif ch == '~':
                 color = curses.color_pair(4)
                 draw = '░'
@@ -171,7 +197,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
         dy = y - cam_y
         forward = dx * forward_x + dy * forward_y
         right = dx * right_x + dy * right_y
-        if forward <= 0:
+        if forward <= 0 or forward > VIEW_DISTANCE:
             return None
         sx = width // 2 + int((right / (forward * FOV)) * (width / 2) * CHAR_RATIO)
         sy = horizon + int((1 - forward / VIEW_DISTANCE) * (height - horizon))
@@ -337,6 +363,7 @@ def main(stdscr):
 
     if not show_title_screen(stdscr):
         return
+    countdown(stdscr)
     stdscr.nodelay(True)
 
     game_map = Map.from_file('sample_map.txt')
