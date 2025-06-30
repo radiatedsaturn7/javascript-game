@@ -43,7 +43,13 @@ class AIPlayer(Player):
         front_y = self.y - math.cos(self.angle) * look_dist
         front = game_map.char_at(front_x / 5.0, front_y / 5.0)
         self.throttle = front != 'o'
+        prev_x, prev_y = self.x, self.y
         super().update()
+        tile = game_map.char_at(self.x / 5.0, self.y / 5.0)
+        if tile == 'o':
+            self.x = prev_x
+            self.y = prev_y
+            self.speed = 0
 
 
 class AIOrchestrator:
