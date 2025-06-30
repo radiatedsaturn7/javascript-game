@@ -16,6 +16,18 @@ class Player:
         self.health = health
         self._boost_frames = 0
 
+    def direction_arrow(self) -> str:
+        """Return an ASCII arrow representing the facing direction."""
+        angle = self.angle % (2 * math.pi)
+        if angle < math.pi / 4 or angle >= 7 * math.pi / 4:
+            return '^'
+        elif angle < 3 * math.pi / 4:
+            return '>'
+        elif angle < 5 * math.pi / 4:
+            return 'v'
+        else:
+            return '<'
+
     def turn_left(self):
         self.angle -= 0.1
 

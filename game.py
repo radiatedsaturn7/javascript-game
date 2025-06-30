@@ -18,15 +18,19 @@ def draw_scene(stdscr, game_map: Map, player: Player):
 
     forward_x = math.sin(player.angle)
     forward_y = -math.cos(player.angle)
-    left_x = math.cos(player.angle)
-    left_y = math.sin(player.angle)
+    right_x = math.cos(player.angle)
+    right_y = math.sin(player.angle)
+
+    # camera slightly behind the player for a third-person view
+    cam_x = player.x - forward_x
+    cam_y = player.y - forward_y
 
     for sy in range(horizon, height - 1):
         depth = ((sy - horizon + 1) / (height - horizon)) * VIEW_DISTANCE
         for sx in range(width - 1):
             offset = ((sx - width / 2) / (width / 2)) * depth * FOV
-            wx = player.x + forward_x * depth + left_x * offset
-            wy = player.y + forward_y * depth + left_y * offset
+            wx = cam_x + forward_x * depth + right_x * offset
+            wy = cam_y + forward_y * depth + right_y * offset
             ch = game_map.char_at(wx, wy)
             if ch in ('o', '~'):
                 stdscr.addch(sy, sx, ord(ch), curses.color_pair(1))
@@ -35,8 +39,9 @@ def draw_scene(stdscr, game_map: Map, player: Player):
             else:
                 stdscr.addch(sy, sx, ord(' '), curses.color_pair(5))
 
-    # draw player ship as blue triangle near bottom center
-    stdscr.addch(height - 2, width // 2, ord('^'), curses.color_pair(2))
+    # draw player ship near bottom center showing orientation
+    ship_char = player.direction_arrow()
+    stdscr.addch(height - 2, width // 2, ord(ship_char), curses.color_pair(2))
 
     # draw minimap in the top-left corner
     mini_h = min(game_map.height, MINIMAP_MAX_SIZE)
@@ -57,7 +62,7 @@ def draw_scene(stdscr, game_map: Map, player: Player):
                 color = curses.color_pair(4)
             draw_char = char
             if int(player.x) == mx and int(player.y) == my:
-                draw_char = '^'
+                draw_char = player.direction_arrow()
                 color = curses.color_pair(2)
             stdscr.addch(my, mx, ord(draw_char), color)
 
@@ -70,6 +75,13 @@ def draw_scene(stdscr, game_map: Map, player: Player):
         if start_x + idx < width:
             color = curses.color_pair(3) if ch == '#' else curses.color_pair(4)
             stdscr.addch(0, start_x + idx, ord(ch), color)
+
+    angle_str = f"A:{int(math.degrees(player.angle)) % 360:3d}"
+    start_x = max(0, width - len(angle_str) - 1)
+    if height > 1:
+        for idx, ch in enumerate(angle_str):
+            if start_x + idx < width:
+                stdscr.addch(1, start_x + idx, ord(ch), curses.color_pair(4))
 
 
 def explosion_animation(stdscr, width, height):
