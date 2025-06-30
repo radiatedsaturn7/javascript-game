@@ -132,7 +132,9 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
             offset = ((sx - width / 2) / (width / 2)) * depth * FOV * CHAR_RATIO
             wx = cam_x + forward_x * depth + right_x * offset
             wy = cam_y + forward_y * depth + right_y * offset
-            ch = game_map.char_at(wx / MAP_SCALE, wy / MAP_SCALE)
+            tx = int(wx / MAP_SCALE)
+            ty = int(wy / MAP_SCALE)
+            ch = game_map.char_at(tx, ty)
             draw = ' '
             color = curses.color_pair(3)
             if ch == 'o':
@@ -140,7 +142,13 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(10)
                 else:
                     color = curses.color_pair(1)
-                draw = '█'
+                neighbors = [
+                    game_map.char_at(tx + dx, ty + dy)
+                    for dx in (-1, 0, 1)
+                    for dy in (-1, 0, 1)
+                    if not (dx == 0 and dy == 0)
+                ]
+                draw = '▓' if any(n != 'o' for n in neighbors) else '█'
             elif ch == '~':
                 color = curses.color_pair(4)
                 draw = '░'
@@ -211,13 +219,22 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
     mini_w = min(game_map.width, MINIMAP_MAX_SIZE)
     start_y = 1
     start_x = 1
+
+    # keep player centered on the minimap
+    px = int(player.x / MAP_SCALE)
+    py = int(player.y / MAP_SCALE)
+    map_start_x = max(0, min(game_map.width - mini_w, px - mini_w // 2))
+    map_start_y = max(0, min(game_map.height - mini_h, py - mini_h // 2))
+
     for my in range(mini_h):
         if start_y + my >= height:
             break
         for mx in range(mini_w):
             if start_x + mx >= width:
                 break
-            char = game_map.char_at(mx, my)
+            map_x = map_start_x + mx
+            map_y = map_start_y + my
+            char = game_map.char_at(map_x, map_y)
             color = curses.color_pair(3)  # road by default
             if char == 'o':
                 color = curses.color_pair(1)
@@ -230,7 +247,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
             elif char == '=':
                 color = curses.color_pair(7)
             draw_char = char
-            if int(player.x / MAP_SCALE) == mx and int(player.y / MAP_SCALE) == my:
+            if px == map_x and py == map_y:
                 draw_char = player.direction_arrow()
                 color = curses.color_pair(2)
             stdscr.addch(start_y + my, start_x + mx, ord(draw_char), color)
@@ -342,6 +359,11 @@ def main(stdscr):
     KEY_HOLD_FRAMES = 6
 
     def press(k):
+        # refresh timers for all currently pressed keys so multiple
+        # simultaneous key presses remain active even if only one
+        # generates repeat events
+        for existing in list(key_timers.keys()):
+            key_timers[existing] = KEY_HOLD_FRAMES
         key_timers[k] = KEY_HOLD_FRAMES
 
     while True:
