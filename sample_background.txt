@@ -1,0 +1,22 @@
+
+
+       .                                                                                                            ~~~~~~
+       |                   |\                                                         ~~~~~          *           ~~~~
+       ^                   | \                                                      ~~~~~
+      |x|  _          _    @  X
+   _  |x| |x|        |x|      X          ^        O    O O                                                 ~~~                O
+  |x| |x| |x|        |x|      X         |x|       ! Oo !O!                                                                    !                      
+_______________________________________________________________________________________________________________________________________________
+KEY:
+BACKGROUND BLUE
+| GREY
+_ GREY
+x GREY
+\ YELLOW
+X YELLOW
+o GREEN
+! BROWN
+o DARK GREEN
+~ WHITE
+* YELLOW
+. ANIMATED RED,DARK RED
