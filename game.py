@@ -83,7 +83,6 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
             if 0 <= y < height and 0 <= x < width:
                 color = curses.color_pair(9) if player.boosting else curses.color_pair(8)
                 stdscr.addch(y, x, ord(ch), color)
-
     draw_ship()
 
     # draw minimap in the top-left corner
