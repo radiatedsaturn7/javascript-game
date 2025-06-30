@@ -8,15 +8,51 @@ from player import Player
 FRAME_DELAY = 1 / 30.0
 VIEW_DISTANCE = 20.0
 FOV = 0.7
+CHAR_RATIO = 0.5
+CAMERA_OFFSET = 2.0
+MAP_SCALE = 2.0
 
 MINIMAP_MAX_SIZE = 10
 
 
-def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
+def load_background(path):
+    lines = []
+    with open(path, 'r') as f:
+        for line in f:
+            if line.strip() == 'KEY:':
+                break
+            lines.append(line.rstrip('\n'))
+    return lines
+
+
+BACKGROUND = load_background('sample_background.txt')
+BG_COLOR_MAP = {
+    '|': 13,
+    '_': 13,
+    'x': 13,
+    '\\': 14,
+    'X': 14,
+    'o': 15,
+    '!': 6,
+    '~': 3,
+    '*': 14,
+    '.': 17,
+}
+
+
+def format_time(t: float) -> str:
+    m = int(t // 60)
+    s = t % 60
+    return f"{m:02d}:{s:05.2f}"
+
+
+def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None):
     height, width = stdscr.getmaxyx()
     horizon = height // 3
     if flash is None:
         flash = {'x': None, 'y': None, 'timer': 0}
+    if background is None:
+        background = BACKGROUND
 
     forward_x = math.sin(player.angle)
     forward_y = -math.cos(player.angle)
@@ -24,16 +60,36 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
     right_y = math.sin(player.angle)
 
     # camera slightly behind the player for a third-person view
-    cam_x = player.x - forward_x
-    cam_y = player.y - forward_y
+
+    cam_x = player.x - forward_x * CAMERA_OFFSET
+    cam_y = player.y - forward_y * CAMERA_OFFSET
+
+    bg_h = len(background)
+    bg_w = max(len(l) for l in background) if bg_h else 0
+    for sy in range(horizon):
+        if bg_h == 0:
+            break
+        rel_y = sy / max(1, horizon - 1)
+        by = int(rel_y * bg_h)
+        for sx in range(width):
+            ang = (sx / width - 0.5) * FOV
+            world_ang = (player.angle + ang) % (2 * math.pi)
+            bx = int((world_ang / (2 * math.pi)) * bg_w)
+            ch = ' '
+            if 0 <= by < bg_h and 0 <= bx < len(background[by]):
+                ch = background[by][bx]
+            color_id = BG_COLOR_MAP.get(ch, 12)
+            if ch == '.':
+                color_id = 17 if player.frame % 2 == 0 else 18
+            stdscr.addch(sy, sx, ord(ch), curses.color_pair(color_id))
 
     for sy in range(horizon, height - 1):
         depth = ((height - sy) / (height - horizon)) * VIEW_DISTANCE
         for sx in range(width - 1):
-            offset = ((sx - width / 2) / (width / 2)) * depth * FOV
+            offset = ((sx - width / 2) / (width / 2)) * depth * FOV * CHAR_RATIO
             wx = cam_x + forward_x * depth + right_x * offset
             wy = cam_y + forward_y * depth + right_y * offset
-            ch = game_map.char_at(wx, wy)
+            ch = game_map.char_at(wx / MAP_SCALE, wy / MAP_SCALE)
             draw = ' '
             color = curses.color_pair(3)
             if ch == 'o':
@@ -68,6 +124,9 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
         elif player.lean > 0.5:
             lines = [" _|^|_\\ ", "---/O--O\\-"]
         flame_line = f"   {flames[0]}  {flames[1]}"
+        flame_lines = [flame_line]
+        if player.speed > 0:
+            flame_lines.append(flame_line)
         start_y = height - 4
         start_x = width // 2 - len(lines[0]) // 2
         for i, line in enumerate(lines):
@@ -77,12 +136,13 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
                 if 0 <= y < height and 0 <= x < width:
                     stdscr.addch(y, x, ord(ch), curses.color_pair(2))
         i = len(lines)
-        for j, ch in enumerate(flame_line):
-            y = start_y + i
-            x = start_x + j
-            if 0 <= y < height and 0 <= x < width:
-                color = curses.color_pair(9) if player.boosting else curses.color_pair(8)
-                stdscr.addch(y, x, ord(ch), color)
+        for k, fl in enumerate(flame_lines):
+            for j, ch in enumerate(fl):
+                y = start_y + i + k
+                x = start_x + j
+                if 0 <= y < height and 0 <= x < width:
+                    color = curses.color_pair(9) if player.boosting else curses.color_pair(8)
+                    stdscr.addch(y, x, ord(ch), color)
     draw_ship()
 
     # draw minimap in the top-left corner
@@ -107,7 +167,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
             elif char == '=':
                 color = curses.color_pair(7)
             draw_char = char
-            if int(player.x) == mx and int(player.y) == my:
+            if int(player.x / MAP_SCALE) == mx and int(player.y / MAP_SCALE) == my:
                 draw_char = player.direction_arrow()
                 color = curses.color_pair(2)
             stdscr.addch(my, mx, ord(draw_char), color)
@@ -122,12 +182,20 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None):
             color = curses.color_pair(3) if ch == '#' else curses.color_pair(4)
             stdscr.addch(0, start_x + idx, ord(ch), color)
 
-    angle_str = f"A:{int(math.degrees(player.angle)) % 360:3d}"
-    start_x = max(0, width - len(angle_str) - 1)
-    if height > 1:
-        for idx, ch in enumerate(angle_str):
-            if start_x + idx < width:
-                stdscr.addch(1, start_x + idx, ord(ch), curses.color_pair(4))
+    hud_lines = []
+    hud_lines.append(f"Lap:{player.lap}")
+    best = '--:--.--' if player.best_lap is None else format_time(player.best_lap)
+    hud_lines.append(f"Best:{best}")
+    hud_lines.append(f"Time:{format_time(player.total_time())}")
+    hud_lines.append("Place:1st")
+    hud_lines.append(f"A:{int(math.degrees(player.angle)) % 360:3d}")
+
+    for idx, text in enumerate(hud_lines, start=1):
+        start_x = max(0, width - len(text) - 1)
+        if height > idx:
+            for j, ch in enumerate(text):
+                if start_x + j < width:
+                    stdscr.addch(idx, start_x + j, ord(ch), curses.color_pair(4))
 
 
 def explosion_animation(stdscr, width, height):
@@ -163,10 +231,19 @@ def main(stdscr):
     curses.init_pair(9, curses.COLOR_BLUE, curses.COLOR_BLACK)     # boost flame
     curses.init_pair(10, curses.COLOR_BLACK, curses.COLOR_BLACK)   # empty / flash
     curses.init_pair(11, curses.COLOR_YELLOW, curses.COLOR_RED)    # explosion
+    curses.init_pair(12, curses.COLOR_BLUE, curses.COLOR_BLACK)    # background blue
+    curses.init_pair(13, curses.COLOR_WHITE, curses.COLOR_BLACK)   # grey
+    curses.init_pair(14, curses.COLOR_YELLOW, curses.COLOR_BLACK)  # yellow
+    curses.init_pair(15, curses.COLOR_GREEN, curses.COLOR_BLACK)   # green
+    curses.init_pair(16, curses.COLOR_GREEN, curses.COLOR_BLACK)   # dark green
+    curses.init_pair(17, curses.COLOR_RED, curses.COLOR_BLACK)     # blink bright
+    curses.init_pair(18, curses.COLOR_RED, curses.COLOR_BLACK)     # blink dark
 
     game_map = Map.from_file('sample_map.txt')
-    player = Player(x=game_map.start_x, y=game_map.start_y)
+    player = Player(x=game_map.start_x * MAP_SCALE, y=game_map.start_y * MAP_SCALE)
     flash_wall = {'x': None, 'y': None, 'timer': 0}
+
+    start_line_y = game_map.start_y * MAP_SCALE
 
     last_time = time.time()
     left_timer = right_timer = throttle_timer = 0
@@ -210,7 +287,9 @@ def main(stdscr):
 
         prev_x, prev_y = player.x, player.y
         player.update()
-        if game_map.char_at(player.x, player.y) == 'o':
+        if prev_y < start_line_y <= player.y:
+            player.complete_lap()
+        if game_map.char_at(player.x / MAP_SCALE, player.y / MAP_SCALE) == 'o':
             flash_wall['x'] = int(player.x)
             flash_wall['y'] = int(player.y)
             flash_wall['timer'] = 3

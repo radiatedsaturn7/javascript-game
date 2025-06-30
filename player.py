@@ -1,4 +1,5 @@
 import math
+import time
 
 class Player:
     """Represents the player's position, orientation and state."""
@@ -17,6 +18,10 @@ class Player:
         self._boost_frames = 0
         self.lean = 0.0
         self.frame = 0
+        self.lap = 1
+        self.best_lap = None
+        self._lap_start = time.time()
+        self.start_time = time.time()
 
     def direction_arrow(self) -> str:
         """Return an ASCII arrow representing the facing direction."""
@@ -92,3 +97,13 @@ class Player:
     def boosting(self) -> bool:
         """Return True while boost is active."""
         return self._boost_frames > 0
+
+    def total_time(self) -> float:
+        return time.time() - self.start_time
+
+    def complete_lap(self):
+        lap_time = time.time() - self._lap_start
+        if self.best_lap is None or lap_time < self.best_lap:
+            self.best_lap = lap_time
+        self.lap += 1
+        self._lap_start = time.time()
