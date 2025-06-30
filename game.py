@@ -19,9 +19,9 @@ def draw_scene(stdscr, game_map: Map, player: Player):
     left_x = math.cos(player.angle)
     left_y = math.sin(player.angle)
 
-    for sy in range(horizon, height):
+    for sy in range(horizon, height - 1):
         depth = ((sy - horizon + 1) / (height - horizon)) * VIEW_DISTANCE
-        for sx in range(width):
+        for sx in range(width - 1):
             offset = ((sx - width / 2) / (width / 2)) * depth * FOV
             wx = player.x + forward_x * depth + left_x * offset
             wy = player.y + forward_y * depth + left_y * offset
