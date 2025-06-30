@@ -14,7 +14,7 @@ class AIPlayer(Player):
         """Score a direction based on the tile at the lookahead location."""
         lx = self.x + math.sin(ang) * look_dist
         ly = self.y - math.cos(ang) * look_dist
-        tile = game_map.char_at(lx / 4.0, ly / 4.0)
+        tile = game_map.char_at(lx / 5.0, ly / 5.0)
         score = 0.0
         if tile == 'o':
             score -= 5
@@ -41,7 +41,7 @@ class AIPlayer(Player):
         # throttle only if the path ahead is clear
         front_x = self.x + math.sin(self.angle) * look_dist
         front_y = self.y - math.cos(self.angle) * look_dist
-        front = game_map.char_at(front_x / 4.0, front_y / 4.0)
+        front = game_map.char_at(front_x / 5.0, front_y / 5.0)
         self.throttle = front != 'o'
         super().update()
 
@@ -54,8 +54,8 @@ class AIOrchestrator:
         self.ai_players = ai_players
 
     def _progress(self, racer, game_map) -> float:
-        start_x = game_map.start_x * 4.0
-        start_y = game_map.start_y * 4.0
+        start_x = game_map.start_x * 5.0
+        start_y = game_map.start_y * 5.0
         return math.hypot(racer.x - start_x, racer.y - start_y)
 
     def update(self, game_map):
