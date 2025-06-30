@@ -1,5 +1,10 @@
-ooooooooooooooooooo
-o                 o
-o====oooo         o
-o                 o
-ooooooooooooooooooo
+~~~~~~~~~~~~
+~oooooooooooo~
+~o      J#        #o~
+~o        #        #o~
+~o===oooo    #o~
+~oHS oooo    #o~
+~oH                #o~
+~o          B      #o~
+~oooooooooooo~
+~~~~~~~~~~~~~!

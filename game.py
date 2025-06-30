@@ -28,8 +28,8 @@ def draw_scene(stdscr, game_map: Map, player: Player):
             wx = player.x + forward_x * depth + left_x * offset
             wy = player.y + forward_y * depth + left_y * offset
             ch = game_map.char_at(wx, wy)
-            if ch == 'o':
-                stdscr.addch(sy, sx, ord('o'), curses.color_pair(1))
+            if ch in ('o', '~'):
+                stdscr.addch(sy, sx, ord(ch), curses.color_pair(1))
             elif ch == '=':
                 stdscr.addch(sy, sx, ord('='), curses.color_pair(3))
             else:
@@ -49,7 +49,7 @@ def draw_scene(stdscr, game_map: Map, player: Player):
                 break
             char = game_map.char_at(mx, my)
             color = curses.color_pair(5)  # track by default
-            if char == 'o':
+            if char in ('o', '~'):
                 color = curses.color_pair(1)
             elif char == '=':
                 color = curses.color_pair(3)
@@ -94,15 +94,15 @@ def main(stdscr):
     stdscr.nodelay(True)
     stdscr.keypad(True)
     curses.start_color()
-    curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLACK)  # walls
+    curses.init_pair(1, curses.COLOR_GREEN, curses.COLOR_BLACK)  # obstacles
     curses.init_pair(2, curses.COLOR_BLUE, curses.COLOR_BLACK)   # player ship
     curses.init_pair(3, curses.COLOR_RED, curses.COLOR_BLACK)    # start line
-    curses.init_pair(4, curses.COLOR_GREEN, curses.COLOR_BLACK)  # grass
-    curses.init_pair(5, curses.COLOR_WHITE, curses.COLOR_BLACK)  # track
+    curses.init_pair(4, curses.COLOR_CYAN, curses.COLOR_BLACK)   # minimap features
+    curses.init_pair(5, curses.COLOR_BLACK, curses.COLOR_BLACK)  # drivable track
     curses.init_pair(6, curses.COLOR_YELLOW, curses.COLOR_RED)   # explosion
 
     game_map = Map.from_file('sample_map.txt')
-    player = Player(x=game_map.width / 2, y=game_map.height - 2)
+    player = Player(x=game_map.start_x, y=game_map.start_y)
 
     last_time = time.time()
     left_timer = right_timer = throttle_timer = 0
