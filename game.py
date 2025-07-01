@@ -32,7 +32,7 @@ MINIMAP_MAX_SIZE = 10
 # pitches the camera downward so more of the track is visible. The previous
 # value of one third left a lot of empty space, so tilt the camera down by
 # roughly fifteen degrees by moving the horizon higher on the screen.
-HORIZON_RATIO = 0.25
+HORIZON_RATIO = 0.18
 
 
 def enter_fullscreen():
