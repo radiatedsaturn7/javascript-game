@@ -11,7 +11,9 @@ FRAME_DELAY = 1 / 30.0
 # Rendering constants
 # Increase view distance so the track stretches further out and appears less
 # like a vertical ramp.
-VIEW_DISTANCE = 60.0
+# Double the view distance so the horizon stretches further and objects
+# can appear closer or farther away in the pseudo‑3D projection.
+VIEW_DISTANCE = 120.0
 
 # Slightly narrower field of view and a camera a bit closer to the player help
 # reduce the "quarter-pipe" appearance.
@@ -162,6 +164,10 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
             ch = game_map.char_at(tx, ty)
             draw = ' '
             color = curses.color_pair(3)
+            neighbors = [
+                game_map.char_at(tx + dx, ty + dy)
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+            ]
             if ch == 'o':
                 if flash['timer'] > 0 and flash['x'] == int(wx) and flash['y'] == int(wy):
                     color = curses.color_pair(10)
@@ -195,9 +201,16 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(7)
                 else:
                     color = curses.color_pair(10)
+            # Apply simple blending at boundaries between different tiles
+            if any(n != ch for n in neighbors):
+                if draw == ' ':
+                    draw = '░'
+                elif draw in {'▓', '▒'}:
+                    draw = '▒'
             stdscr.addch(sy, sx, ord(draw), color)
 
     def project(x, y):
+        """Project world coordinates to screen coordinates and scale."""
         dx = x - cam_x
         dy = y - cam_y
         forward = dx * forward_x + dy * forward_y
@@ -206,14 +219,24 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
             return None
         sx = width // 2 + int((right / (forward * FOV)) * (width / 2) * CHAR_RATIO)
         sy = horizon + int((1 - forward / VIEW_DISTANCE) * (height - horizon))
-        return sx, sy
+        scale = max(1, int((VIEW_DISTANCE - forward) / (VIEW_DISTANCE / 3)))
+        return sx, sy, scale
+
+
+    def draw_ai(ai):
+        """Render an AI racer with simple distance scaling and rotation."""
+        pos = project(ai.x, ai.y)
+        if not pos:
+            return
+        sx, sy, scale = pos
+        char = ai.direction_arrow()
+        for i in range(scale):
+            y = sy - i
+            if 0 <= y < height and 0 <= sx < width - 1:
+                stdscr.addch(y, sx, ord(char), curses.color_pair(15))
 
     for ai in ai_players:
-        pos = project(ai.x, ai.y)
-        if pos:
-            sx, sy = pos
-            if 0 <= sy < height - 1 and 0 <= sx < width - 1:
-                stdscr.addch(sy, sx, ord('A'), curses.color_pair(15))
+        draw_ai(ai)
 
     # draw player ship near bottom center showing orientation
     def draw_ship():
