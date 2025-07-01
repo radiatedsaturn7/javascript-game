@@ -169,9 +169,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(1)
                 neighbors = [
                     game_map.char_at(tx + dx, ty + dy)
-                    for dx in (-1, 0, 1)
-                    for dy in (-1, 0, 1)
-                    if not (dx == 0 and dy == 0)
+                    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
                 ]
                 angle_to_cell = math.atan2(wy - cam_y, wx - cam_x)
                 rel_ang = abs((angle_to_cell - player.angle + math.pi) % (2 * math.pi) - math.pi)
@@ -213,7 +211,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
         if pos:
             sx, sy = pos
             if 0 <= sy < height - 1 and 0 <= sx < width - 1:
-                stdscr.addch(sy, sx, ord('A'), curses.color_pair(15))
+                stdscr.addch(sy, sx, ord(ai.direction_arrow()), curses.color_pair(15))
 
     # draw player ship near bottom center showing orientation
     def draw_ship():
@@ -395,7 +393,7 @@ def main(stdscr):
     last_time = time.time()
     key_timers = {}
 
-    KEY_HOLD_FRAMES = 6
+    KEY_HOLD_FRAMES = 15
 
     def press(k):
         # refresh timers for all currently pressed keys so multiple
