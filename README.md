@@ -38,11 +38,15 @@ _(Yeah, that's it—`curses` is built-in on Unix. Windows just needs a little he
 
 ## 🕹 Controls
 
-| Key | Action        |
-|-----|---------------|
-| ←   | Steer Left    |
-| →   | Steer Right   |
-| Q   | Quit (when your eyes start bleeding) |
+| Key | Action                     |
+|-----|----------------------------|
+| ←   | Steer Left                 |
+| →   | Steer Right                |
+| ↑   | Pitch Up (air only)        |
+| ↓   | Pitch Down (air only)      |
+| Space | Throttle / Accelerate   |
+| B   | Boost (costs health)       |
+| Q   | Quit                       |
 
 ---
 
