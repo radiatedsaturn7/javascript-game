@@ -175,9 +175,7 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
                     color = curses.color_pair(1)
                 neighbors = [
                     game_map.char_at(tx + dx, ty + dy)
-                    for dx in (-1, 0, 1)
-                    for dy in (-1, 0, 1)
-                    if not (dx == 0 and dy == 0)
+                    for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1))
                 ]
                 angle_to_cell = math.atan2(wy - cam_y, wx - cam_x)
                 rel_ang = abs((angle_to_cell - player.angle + math.pi) % (2 * math.pi) - math.pi)
@@ -226,17 +224,10 @@ def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=Non
     def draw_ai(ai):
         """Render an AI racer with simple distance scaling and rotation."""
         pos = project(ai.x, ai.y)
-        if not pos:
-            return
-        sx, sy, scale = pos
-        char = ai.direction_arrow()
-        for i in range(scale):
-            y = sy - i
-            if 0 <= y < height and 0 <= sx < width - 1:
-                stdscr.addch(y, sx, ord(char), curses.color_pair(15))
-
-    for ai in ai_players:
-        draw_ai(ai)
+        if pos:
+            sx, sy = pos
+            if 0 <= sy < height - 1 and 0 <= sx < width - 1:
+                stdscr.addch(sy, sx, ord(ai.direction_arrow()), curses.color_pair(15))
 
     # draw player ship near bottom center showing orientation
     def draw_ship():
@@ -418,7 +409,7 @@ def main(stdscr):
     last_time = time.time()
     key_timers = {}
 
-    KEY_HOLD_FRAMES = 6
+    KEY_HOLD_FRAMES = 15
 
     def press(k):
         # refresh timers for all currently pressed keys so multiple
