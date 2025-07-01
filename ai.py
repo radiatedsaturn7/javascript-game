@@ -31,8 +31,9 @@ class AIPlayer(Player):
         return score / len(distances)
 
     def update_ai(self, game_map):
-        look_dist = 3.0
-        angles = [-0.4, -0.2, 0.0, 0.2, 0.4]
+        # Extend look distance so AI better anticipates upcoming turns
+        look_dist = 5.0
+        angles = [-0.6, -0.3, 0.0, 0.3, 0.6]
         scores = [self._score_direction(self.angle + a, look_dist, game_map) for a in angles]
         best_idx = scores.index(max(scores))
         if angles[best_idx] < 0:
