@@ -7,6 +7,11 @@ from map_loader import Map
 from player import Player
 from ai import AIPlayer, AIOrchestrator
 
+try:
+    import keyboard as keylib  # optional library for better key state tracking
+except Exception:  # noqa: BLE001
+    keylib = None
+
 FRAME_DELAY = 1 / 30.0
 # Rendering constants
 # Increase view distance so the track stretches further out and appears less
@@ -22,6 +27,12 @@ CHAR_RATIO = 0.5
 CAMERA_OFFSET = 2.0
 MAP_SCALE = 5.0
 MINIMAP_MAX_SIZE = 10
+
+# Portion of the screen above the horizon line. Reducing this effectively
+# pitches the camera downward so more of the track is visible. The previous
+# value of one third left a lot of empty space, so tilt the camera down by
+# roughly fifteen degrees by moving the horizon higher on the screen.
+HORIZON_RATIO = 0.25
 
 
 def enter_fullscreen():
@@ -116,7 +127,7 @@ def countdown(stdscr, draw_cb=None):
 
 def draw_scene(stdscr, game_map: Map, player: Player, flash=None, background=None, ai_players=None):
     height, width = stdscr.getmaxyx()
-    horizon = height // 3
+    horizon = int(height * HORIZON_RATIO)
     if flash is None:
         flash = {'x': None, 'y': None, 'timer': 0}
     if background is None:
@@ -412,40 +423,55 @@ def main(stdscr):
     KEY_HOLD_FRAMES = 15
 
     def press(k):
-        # refresh timers for all currently pressed keys so multiple
-        # simultaneous key presses remain active even if only one
-        # generates repeat events
+        """Record that key ``k`` is pressed for a few frames."""
         for existing in list(key_timers.keys()):
             key_timers[existing] = KEY_HOLD_FRAMES
         key_timers[k] = KEY_HOLD_FRAMES
 
     while True:
-        while True:
-            key = stdscr.getch()
-            if key == -1:
-                break
-            if key in (ord('q'), ord('Q')):
+        if keylib:
+            if keylib.is_pressed('q'):
                 return
-            press(key)
+        else:
+            while True:
+                key = stdscr.getch()
+                if key == -1:
+                    break
+                if key in (ord('q'), ord('Q')):
+                    return
+                press(key)
 
-        if key_timers.get(curses.KEY_LEFT, 0) > 0:
-            player.turn_left()
-        if key_timers.get(curses.KEY_RIGHT, 0) > 0:
-            player.turn_right()
-        if key_timers.get(curses.KEY_UP, 0) > 0:
-            player.vertical_input(1)
-        if key_timers.get(curses.KEY_DOWN, 0) > 0:
-            player.vertical_input(-1)
+        if keylib:
+            if keylib.is_pressed('left'):
+                player.turn_left()
+            if keylib.is_pressed('right'):
+                player.turn_right()
+            if keylib.is_pressed('up'):
+                player.vertical_input(1)
+            if keylib.is_pressed('down'):
+                player.vertical_input(-1)
+            player.throttle = keylib.is_pressed('space')
+            if keylib.is_pressed('b'):
+                player.start_boost()
+        else:
+            if key_timers.get(curses.KEY_LEFT, 0) > 0:
+                player.turn_left()
+            if key_timers.get(curses.KEY_RIGHT, 0) > 0:
+                player.turn_right()
+            if key_timers.get(curses.KEY_UP, 0) > 0:
+                player.vertical_input(1)
+            if key_timers.get(curses.KEY_DOWN, 0) > 0:
+                player.vertical_input(-1)
 
-        player.throttle = key_timers.get(ord(' '), 0) > 0
+            player.throttle = key_timers.get(ord(' '), 0) > 0
 
-        if key_timers.get(ord('b'), 0) > 0 or key_timers.get(ord('B'), 0) > 0:
-            player.start_boost()
+            if key_timers.get(ord('b'), 0) > 0 or key_timers.get(ord('B'), 0) > 0:
+                player.start_boost()
 
-        for k in list(key_timers.keys()):
-            key_timers[k] -= 1
-            if key_timers[k] <= 0:
-                del key_timers[k]
+            for k in list(key_timers.keys()):
+                key_timers[k] -= 1
+                if key_timers[k] <= 0:
+                    del key_timers[k]
 
         if flash_wall['timer'] > 0:
             flash_wall['timer'] -= 1
